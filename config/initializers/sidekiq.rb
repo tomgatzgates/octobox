@@ -18,6 +18,10 @@ if Octobox.background_jobs_enabled?
     config.death_handlers << ->(job, _ex) do
       SidekiqUniqueJobs::Digests.del(digest: job['unique_digest']) if job['unique_digest']
     end
+
+    Sidekiq.default_worker_options = {
+      lock_expiration: 10.minutes,
+    }
   end
 
   Sidekiq.configure_client do |config|
