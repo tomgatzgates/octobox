@@ -3,3 +3,8 @@ sync_notifications:
   class: SyncAllUserNotificationsWorker
   queue: sync_notifications
   description: 'Automatically Sync Notifications for all Users'
+cleanout_digests:
+  cron: '0 8 * * *'
+  class: CleanoutSidekiqUniqueDigestsWorker
+  queue: default
+  description: Clean out unique digests
