@@ -40,7 +40,10 @@ Rails.application.configure do
   # Mount Action Cable outside main process or domain
   # config.action_cable.mount_path = nil
   # config.action_cable.url = 'wss://example.com/cable'
-  # config.action_cable.allowed_request_origins = [ 'http://example.com', /http:\/\/example.*/ ]
+
+  if ENV['WEBSOCKET_ALLOWED_ORIGINS'].present?
+    config.action_cable.allowed_request_origins = ENV['WEBSOCKET_ALLOWED_ORIGINS'].split(',')
+  end
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = ENV.fetch("FORCE_SSL") { false }
@@ -48,6 +51,9 @@ Rails.application.configure do
   # Use the lowest log level to ensure availability of diagnostic information
   # when problems arise.
   config.log_level = :info
+
+  # disable logging of action cable messages
+  config.action_cable.logger = Logger.new(nil)
 
   # Prepend all log lines with the following tags.
   config.log_tags = [ :request_id ]

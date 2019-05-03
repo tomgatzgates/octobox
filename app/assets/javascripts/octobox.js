@@ -4,20 +4,6 @@ var Octobox = (function() {
     $(".js-select_all").click();
   };
 
-  var getCurrentRow = function() {
-    return getDisplayedRows().has("td.js-current");
-  };
-
-  var getDisplayedRows = function() {
-    return $(".js-table-notifications tr.notification");
-  };
-
-  var setRowCurrent = function(row, add) {
-    var classes = "current js-current";
-    var td = row.find("td.notification-checkbox");
-    add ? td.addClass(classes) : td.removeClass(classes);
-  };
-
   var moveCursorToClickedRow = function(event) {
     // Don't event.preventDefault(), since we want the
     // normal clicking behavior for links, starring, etc
@@ -117,15 +103,18 @@ var Octobox = (function() {
     window.current_id = undefined;
 
     $(document).keydown(function(e) {
-      // disable shortcuts for the seach box
-      if ($("#help-box").length && e.target.id !== "search-box" && !e.ctrlKey && !e.metaKey) {
+      // disable shortcuts for the seach and comment
+      if ($("#help-box").length && !["search-box","comment_body"].includes(e.target.id)  && !e.ctrlKey && !e.metaKey) {
         var shortcutFunction = (!e.shiftKey ? shortcuts : shiftShortcuts)[e.which] ;
         if (shortcutFunction) { shortcutFunction(e) }
         return;
       }
 
-      // escape search-box
-      if(e.target.id === "search-box" && e.which === 27) shortcuts[27](e);
+      // escape search and comment
+      if(["search-box", "comment_body"].includes(e.target.id) && e.which === 27) shortcuts[27](e);
+
+      // post comment form on CMD-enter
+      if(["comment_body"].includes(e.target.id) && (e.metaKey || e.ctrlKey) && e.which == 13) $('#reply').submit();
     });
   };
 
@@ -133,11 +122,6 @@ var Octobox = (function() {
     var checked = $(".js-select_all").prop("checked")
     getDisplayedRows().find("input").prop("checked", checked).trigger("change");
   };
-
-  var uncheckAll = function () {
-    $(".js-select_all").prop("checked", false);
-    checkAll();
-  }
 
   var muteThread = function() {
     var id = $('#notification-thread').data('id');
@@ -160,7 +144,6 @@ var Octobox = (function() {
         updateFavicon();
       })
       .fail(function(){
-        $(".header-flash-messages").empty();
         notify("Could not mute notification(s)", "danger");
       });
     }
@@ -174,11 +157,9 @@ var Octobox = (function() {
     .done(function () {
       rows.removeClass("blur-action");
       rows.removeClass("active");
-      uncheckAll();
       updateFavicon();
     })
     .fail(function(){
-        $(".header-flash-messages").empty();
         notify("Could not mark notification(s) read", "danger");
     });
   };
@@ -205,12 +186,12 @@ var Octobox = (function() {
 
   var archiveThread = function(){
     var id = $('#notification-thread').data('id');
-    archive(id, true);
+    archive([id], true);
   }
 
   var unarchiveThread = function(){
     var id = $('#notification-thread').data('id');
-    archive(id, false);
+    archive([id], false);
   }
 
   var archive = function(ids, value){
@@ -220,7 +201,6 @@ var Octobox = (function() {
       updateFavicon();
     })
     .fail(function(){
-      $(".header-flash-messages").empty();
       notify("Could not archive notification(s)", "danger");
     });
   }
@@ -242,7 +222,6 @@ var Octobox = (function() {
       }, success: function(data, status, xhr) {
         if (data["error"] != null) {
           $(".sync .octicon").removeClass("spinning");
-          $(".header-flash-messages").empty();
           notify(data["error"], "danger")
         } else {
           Turbolinks.visit("/"+location.search);
@@ -286,19 +265,27 @@ var Octobox = (function() {
     // handle shift+click multiple check
     var notificationCheckboxes = $(".notification-checkbox .custom-checkbox input");
     $(".notification-checkbox .custom-checkbox").click(function(e) {
+      e.preventDefault();
+      window.getSelection().removeAllRanges(); // remove all text selected
+
       if(!lastCheckedNotification) {
+        // No notifications selected
         lastCheckedNotification = $(this).find("input");
+        lastCheckedNotification.prop("checked", !lastCheckedNotification.prop("checked")).trigger('change');
         return;
       }
 
       if(e.shiftKey) {
         var start = notificationCheckboxes.index($(this).find("input"));
         var end = notificationCheckboxes.index(lastCheckedNotification);
-        var selected = notificationCheckboxes.slice(Math.min(start,end), Math.max(start,end)+ 1)
-        selected.prop("checked", lastCheckedNotification.prop("checked"));
+        var selected = notificationCheckboxes.slice(Math.min(start,end), Math.max(start,end) + 1)
+        selected.prop("checked", lastCheckedNotification.prop("checked")).trigger('change');
+        lastCheckedNotification = $(this).find("input");
+        return;
       }
 
       lastCheckedNotification = $(this).find("input");
+      lastCheckedNotification.prop("checked", !lastCheckedNotification.prop("checked")).trigger('change');
     });
   };
 
@@ -343,21 +330,10 @@ var Octobox = (function() {
     $("td.js-current").removeClass("current js-current");
   };
 
-  var openThread = function() {
-    if($("#thread").hasClass("d-none")){
-      $("#thread").toggleClass("d-none");
-      $(".flex-main").toggleClass("show-thread");
-    }
-    if($(".flex-content").hasClass("active")){
-      $(".flex-content").toggleClass("active");
-    }
-  };
-
   var closeThread = function() {
-    if(!$("#thread").hasClass("d-none")){
-      $("#thread").toggleClass("d-none");
-      $(".flex-main").toggleClass("show-thread");
-    }
+    history.pushState({thread: $(this).attr('href')}, 'Octobox', $(this).attr('href'))
+    $("#thread").addClass("d-none");
+    $(".flex-main").removeClass("show-thread");
   };
 
   var toggleOffCanvas = function() {
@@ -365,20 +341,27 @@ var Octobox = (function() {
   };
 
   function markRead(id) {
-    $.post( "/notifications/"+id+"/mark_read")
+    $.post("/notifications/mark_read_selected" + location.search, {"id": id})
     .done(function() {
       updateFavicon();
     })
     .fail(function(){
-      $(".header-flash-messages").empty();
       notify("Could not mark notification(s) read", "danger");
     });
     $("#notification-"+id).removeClass("active");
   };
 
+  function setViewportHeight() {
+    var vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', "".concat(vh, "px"));
+  };
+
   var initialize = function() {
     enableTooltips();
     enablePopOvers();
+
+    setViewportHeight();
+    window.addEventListener('resize', setViewportHeight);
 
     if ($("#help-box").length){
       enableKeyboardShortcuts();
@@ -414,7 +397,6 @@ var Octobox = (function() {
         updateFavicon();
       })
       .fail(function(){
-        $(".header-flash-messages").empty();
         notify("Could not delete notification", "danger");
       });
     }
@@ -440,13 +422,30 @@ var Octobox = (function() {
 
     $.get($(this).attr('href'), function(data){
       if (data["error"] != null) {
-        $(".header-flash-messages").empty();
         notify(data["error"], "danger")
       } else {
         $('#thread').html(data)
       }
     });
-    openThread();
+    $("#thread").removeClass("d-none");
+    $(".flex-main").addClass("show-thread");
+    $(".flex-content").removeClass("active")
+    subscribeToComments();
+    return false;
+  }
+
+  var expandComments = function() {
+    history.pushState({thread: $(this).attr('href')}, 'Octobox', $(this).attr('href'))
+
+    $('#more-comments').html($('#loading').html())
+
+    $.get($(this).attr('href'), function(data){
+      if (data["error"] != null) {
+        notify(data["error"], "danger")
+      } else {
+        $('#more-comments').html(data)
+      }
+    });
     return false;
   }
 
@@ -472,7 +471,7 @@ var Octobox = (function() {
   };
 
   var getCurrentRow = function() {
-    return getDisplayedRows().has("td.js-current")
+    return getDisplayedRows().has("td.js-current");
   };
 
   var getMarkedOrCurrentRows = function() {
@@ -498,7 +497,8 @@ var Octobox = (function() {
   }
 
   var markCurrent = function() {
-    getCurrentRow().find("input[type=checkbox]").click();
+    currentRow = getCurrentRow().find("input[type=checkbox]");
+    $(currentRow).prop("checked", !$(currentRow).prop("checked")).trigger('change');
   };
 
   var resetCursorAfterRowsRemoved = function(ids) {
@@ -589,7 +589,7 @@ var Octobox = (function() {
   var setRowCurrent = function(row, add) {
     var classes = "current js-current";
     var td = row.find("td.notification-checkbox");
-    add ? td.addClass(classes) : td.removeClass(classes)
+    add ? td.addClass(classes) : td.removeClass(classes);
   };
 
   var moveCursor = function(upOrDown) {
@@ -601,7 +601,7 @@ var Octobox = (function() {
       scrollToCursor();
     }
   };
-  
+
   // keyboard shortcuts when shift key is pressed
   var shiftShortcuts = {
     191: openModal,        // ?
@@ -642,7 +642,6 @@ var Octobox = (function() {
     sync: sync,
     markRowCurrent: markRowCurrent,
     closeThread: closeThread,
-    openThread: openThread,
     archiveThread: archiveThread,
     unarchiveThread: unarchiveThread,
     toggleStarClick: toggleStarClick,
@@ -653,6 +652,7 @@ var Octobox = (function() {
     markRead: markRead,
     deleteSelected: deleteSelected,
     deleteThread: deleteThread,
-    viewThread: viewThread
+    viewThread: viewThread,
+    expandComments: expandComments
   }
 })();

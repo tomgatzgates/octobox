@@ -61,7 +61,7 @@ module StubHelper
   def stub_comments_requests(extra_headers: {})
     headers  = { 'Content-Type' => 'application/json' }.merge(extra_headers)
 
-    stub_request(:get, /\/comments\z/)
+    stub_request(:get, /\/comments\?since\z/)
       .to_return({ status: 200, body: file_fixture('comments.json'), headers: headers })
   end
 
@@ -100,6 +100,13 @@ module StubHelper
       request_headers = {Authorization: "token #{user.effective_access_token}"}
       stub_request(:get, user_url).with(headers: request_headers).to_return(response)
     end
+  end
+
+  def stub_oc_members_request
+    transactions_url = "https://opencollective.com/octobox/members.json"
+
+    response = { status: 200, body: file_fixture('oc_members.json'), headers: { 'Content-Type' => 'application/json' } }
+    stub_request(:get, transactions_url).to_return(response)
   end
 
   def stub_personal_access_tokens_enabled(value: true)
