@@ -12,18 +12,14 @@
 
 ActiveRecord::Schema.define(version: 2019_02_07_110533) do
 
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_stat_statements"
-  enable_extension "plpgsql"
-
-  create_table "app_installation_permissions", force: :cascade do |t|
+  create_table "app_installation_permissions", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "app_installation_id"
     t.integer "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
-  create_table "app_installations", force: :cascade do |t|
+  create_table "app_installations", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "github_id"
     t.integer "app_id"
     t.string "account_login"
@@ -38,7 +34,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.string "permission_statuses"
   end
 
-  create_table "comments", force: :cascade do |t|
+  create_table "comments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "subject_id"
     t.bigint "github_id"
     t.string "author"
@@ -49,7 +45,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.index ["subject_id"], name: "index_comments_on_subject_id"
   end
 
-  create_table "labels", force: :cascade do |t|
+  create_table "labels", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name"
     t.string "color"
     t.bigint "subject_id"
@@ -60,7 +56,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.index ["subject_id"], name: "index_labels_on_subject_id"
   end
 
-  create_table "notifications", id: :serial, force: :cascade do |t|
+  create_table "notifications", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "user_id"
     t.integer "github_id"
     t.integer "repository_id"
@@ -86,7 +82,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.index ["user_id", "github_id"], name: "index_notifications_on_user_id_and_github_id", unique: true
   end
 
-  create_table "pinned_searches", force: :cascade do |t|
+  create_table "pinned_searches", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "user_id"
     t.string "query"
     t.string "name"
@@ -95,7 +91,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.index ["user_id"], name: "index_pinned_searches_on_user_id"
   end
 
-  create_table "repositories", force: :cascade do |t|
+  create_table "repositories", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "full_name", null: false
     t.integer "github_id"
     t.boolean "private"
@@ -108,7 +104,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.index ["github_id"], name: "index_repositories_on_github_id"
   end
 
-  create_table "subjects", force: :cascade do |t|
+  create_table "subjects", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "url"
     t.string "state"
     t.string "author"
@@ -121,13 +117,13 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.boolean "locked"
     t.string "sha"
     t.string "status"
-    t.text "body"
+    t.text "body", limit: 16777215
     t.integer "comment_count"
     t.index ["repository_full_name"], name: "index_subjects_on_repository_full_name"
     t.index ["url"], name: "index_subjects_on_url"
   end
 
-  create_table "subscription_plans", force: :cascade do |t|
+  create_table "subscription_plans", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "github_id"
     t.string "name"
     t.string "description"
@@ -141,7 +137,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.integer "number"
   end
 
-  create_table "subscription_purchases", force: :cascade do |t|
+  create_table "subscription_purchases", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "subscription_plan_id"
     t.integer "account_id"
     t.string "billing_cycle"
@@ -154,7 +150,7 @@ ActiveRecord::Schema.define(version: 2019_02_07_110533) do
     t.integer "oc_transactionid"
   end
 
-  create_table "users", id: :serial, force: :cascade do |t|
+  create_table "users", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "github_id", null: false
     t.string "github_login", null: false
     t.datetime "created_at", null: false
